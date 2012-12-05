@@ -16,16 +16,18 @@
 
 #define LOG_TAG "AudioPolicyManager"
 //#define LOG_NDEBUG 0
+#define DEVICE_OUT_SPEAKER_IN_CALL 0x4000
 #include <utils/Log.h>
 #include "AudioPolicyManager.h"
 #include <media/mediarecorder.h>
+#include <fcntl.h>
 
 namespace android {
 
 
 
 // ----------------------------------------------------------------------------
-// AudioPolicyManager for samsung platform
+// AudioPolicyManager for msm7k platform
 // Common audio policy manager code is implemented in AudioPolicyManagerBase class
 // ----------------------------------------------------------------------------
 
@@ -42,13 +44,6 @@ extern "C" void destroyAudioPolicyManager(AudioPolicyInterface *interface)
     delete interface;
 }
 
-AudioPolicyManager::AudioPolicyManager(AudioPolicyClientInterface *clientInterface)
-                : AudioPolicyManagerBase(clientInterface)
-{
-    mAvailableOutputDevices |= DEVICE_OUT_SPEAKER_IN_CALL;
-    mAvailableOutputDevices |= DEVICE_OUT_SPEAKER_RING;  
-}
-
 uint32_t AudioPolicyManager::getDeviceForStrategy(routing_strategy strategy, bool fromCache)
 {
     uint32_t device = 0;
@@ -58,14 +53,9 @@ uint32_t AudioPolicyManager::getDeviceForStrategy(routing_strategy strategy, boo
         return mDeviceForStrategy[strategy];
     }
 
-    int availableOutputDevices = mAvailableOutputDevices;
-    if (availableOutputDevices & AudioSystem::DEVICE_OUT_WIRED_HEADSET) {
-        availableOutputDevices |= AudioSystem::DEVICE_OUT_WIRED_HEADPHONE;
-    }
-
     switch (strategy) {
     case STRATEGY_DTMF:
-        if (!isInCall()) {
+        if (mPhoneState != AudioSystem::MODE_IN_CALL) {
             // when off call, DTMF strategy follows the same rules as MEDIA strategy
             device = getDeviceForStrategy(STRATEGY_MEDIA, false);
             break;
@@ -78,54 +68,60 @@ uint32_t AudioPolicyManager::getDeviceForStrategy(routing_strategy strategy, boo
         // of priority
         switch (mForceUse[AudioSystem::FOR_COMMUNICATION]) {
         case AudioSystem::FORCE_BT_SCO:
-            if (!isInCall() || strategy != STRATEGY_DTMF) {
-                device = availableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_CARKIT;
+            if (mPhoneState != AudioSystem::MODE_IN_CALL || strategy != STRATEGY_DTMF) {
+                device = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_CARKIT;
                 if (device) break;
             }
-            device = availableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_HEADSET;
+            device = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_HEADSET;
             if (device) break;
-            device = availableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_SCO;
+            device = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_SCO;
             if (device) break;
             // if SCO device is requested but no SCO device is available, fall back to default case
             // FALL THROUGH
 
         default:    // FORCE_NONE
-            device = availableOutputDevices & AudioSystem::DEVICE_OUT_WIRED_HEADPHONE;
+            device = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_WIRED_HEADPHONE;
             if (device) break;
-            device = availableOutputDevices & AudioSystem::DEVICE_OUT_WIRED_HEADSET;
+            device = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_WIRED_HEADSET;
             if (device) break;
 #ifdef WITH_A2DP
             // when not in a phone call, phone strategy should route STREAM_VOICE_CALL to A2DP
-            if (!isInCall()) {
-                device = availableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_A2DP;
+            if (mPhoneState != AudioSystem::MODE_IN_CALL) {
+                device = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_A2DP;
                 if (device) break;
-                device = availableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES;
+                device = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES;
                 if (device) break;
             }
 #endif
-            device = availableOutputDevices & AudioSystem::DEVICE_OUT_EARPIECE;
+            if (mPhoneState == AudioSystem::MODE_RINGTONE)
+                device = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_SPEAKER;
+            if (device) break;
+
+            device = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_EARPIECE;
             if (device == 0) {
                 LOGE("getDeviceForStrategy() earpiece device not found");
             }
             break;
 
         case AudioSystem::FORCE_SPEAKER:
-            if (!isInCall() || strategy != STRATEGY_DTMF) {
-                device = availableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_CARKIT;
+            if (mPhoneState != AudioSystem::MODE_IN_CALL || strategy != STRATEGY_DTMF) {
+                device = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_CARKIT;
                 if (device) break;
             }
 #ifdef WITH_A2DP
             // when not in a phone call, phone strategy should route STREAM_VOICE_CALL to
             // A2DP speaker when forcing to speaker output
-            if (!isInCall()) {
-                device = availableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER;
+            if (mPhoneState != AudioSystem::MODE_IN_CALL) {
+                device = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER;
                 if (device) break;
             }
 #endif
-            device = availableOutputDevices & DEVICE_OUT_SPEAKER_IN_CALL;
-            if (device) break;
+            if (mPhoneState == AudioSystem::MODE_IN_CALL) {
+                device = DEVICE_OUT_SPEAKER_IN_CALL;
+                if (device) break;
+            }
 
-            device = availableOutputDevices & AudioSystem::DEVICE_OUT_SPEAKER;
+            device = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_SPEAKER;
             if (device == 0) {
                 LOGE("getDeviceForStrategy() speaker device not found");
             }
@@ -134,65 +130,81 @@ uint32_t AudioPolicyManager::getDeviceForStrategy(routing_strategy strategy, boo
     break;
 
     case STRATEGY_SONIFICATION:
-    case STRATEGY_MEDIA_SONIFICATION:
-
-        // If incall, just select the STRATEGY_PHONE device: The rest of the behavior is handled by
-        // handleIncallSonification().
-        if (isInCall()) {
-            device = getDeviceForStrategy(STRATEGY_PHONE, false);
-            break;
-        }
-        if (strategy == STRATEGY_SONIFICATION) {
-            device = mAvailableOutputDevices & DEVICE_OUT_SPEAKER_RING;
-            if (device == 0) {
-                LOGE("getDeviceForStrategy() speaker device not found");
-            }
+        device = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_SPEAKER;
+        if (device == 0) {
+            LOGE("getDeviceForStrategy() speaker device not found");
         }
         // The second device used for sonification is the same as the device used by media strategy
         // FALL THROUGH
+
+    case STRATEGY_MEDIA_SONIFICATION:
+        // If incall, just select the STRATEGY_PHONE device: The rest of the behavior is handled by
+        // handleIncallSonification().
+        if (mPhoneState == AudioSystem::MODE_IN_CALL) {
+            device = getDeviceForStrategy(STRATEGY_PHONE, false);
+            break;
+        }
 
     case STRATEGY_MEDIA: {
 #ifdef HAVE_FM_RADIO
         uint32_t device2 = 0;
         if (mForceUse[AudioSystem::FOR_MEDIA] == AudioSystem::FORCE_SPEAKER) {
-            device2 = availableOutputDevices & AudioSystem::DEVICE_OUT_SPEAKER;
+            device2 = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_SPEAKER;
         }
         if (device2 == 0) {
-            device2 = availableOutputDevices & AudioSystem::DEVICE_OUT_AUX_DIGITAL;
+            device2 = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_AUX_DIGITAL;
         }
 #else
-        uint32_t device2 = availableOutputDevices & AudioSystem::DEVICE_OUT_AUX_DIGITAL;
+        uint32_t device2 = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_AUX_DIGITAL;
 #endif
-        if (device2 == 0) {
-            device2 = availableOutputDevices & AudioSystem::DEVICE_OUT_WIRED_HEADSET;
-        }
-        if (device2 == 0) {
-            device2 = availableOutputDevices & AudioSystem::DEVICE_OUT_WIRED_HEADPHONE;
-        }
 #ifdef WITH_A2DP
         if (mA2dpOutput != 0) {
             if (strategy == STRATEGY_SONIFICATION && !a2dpUsedForSonification()) {
                 break;
             }
             if (device2 == 0) {
-                device2 = availableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_A2DP;
+                device2 = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_A2DP;
             }
             if (device2 == 0) {
-                device2 = availableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES;
+                device2 = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES;
             }
             if (device2 == 0) {
-                device2 = availableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER;
+                device2 = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER;
             }
         }
 #endif
         if (device2 == 0) {
+            device2 = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_WIRED_HEADPHONE;
+        }
+        if (device2 == 0) {
+            device2 = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_WIRED_HEADSET;
+        }
+        if (device2 == 0) {
             device2 = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_SPEAKER;
+        }
+        if (device2 == 0) {
+            device2 = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_EARPIECE;
         }
 
         // device is DEVICE_OUT_SPEAKER if we come from case STRATEGY_SONIFICATION, 0 otherwise
-        device |= device2;
+        device = device ? device : device2;
         if (device == 0) {
             LOGE("getDeviceForStrategy() speaker device not found");
+        }
+
+#ifdef HAVE_FM_RADIO
+        if (mAvailableOutputDevices & AudioSystem::DEVICE_OUT_FM_ALL) {
+                device |= AudioSystem::DEVICE_OUT_FM_ALL;
+        }
+#endif
+
+        // Do not play media stream if in call and the requested device would change the hardware
+        // output routing
+        if (mPhoneState == AudioSystem::MODE_IN_CALL &&
+            !AudioSystem::isA2dpDevice((AudioSystem::audio_devices)device) &&
+            device != getDeviceForStrategy(STRATEGY_PHONE)) {
+            device = 0;
+            LOGV("getDeviceForStrategy() incompatible media and phone devices");
         }
         } break;
 

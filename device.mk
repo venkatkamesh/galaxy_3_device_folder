@@ -59,12 +59,6 @@ PRODUCT_COPY_FILES += \
 
 # HAL libs and other system binaries
 PRODUCT_PACKAGES += \
-    copybit.GT-I5800 \
-    gralloc.GT-I5800 \
-    gps.GT-I5800 \
-    sensors.GT-I5800 \
-    lights.GT-I5800 \
-    libGLES_fimg \
     brcm_patchram_plus \
     screencap \
     dexpreopt \
@@ -128,10 +122,6 @@ PRODUCT_PACKAGES += \
     VisualizationWallpapers \
     librs_jni
 
-# The OpenGL ES API level that is natively supported by this device.
-# This is a 16.16 fixed point number
-PRODUCT_PROPERTY_OVERRIDES := \
-    ro.opengles.version=131072
 
 # Keyboard maps
 PRODUCT_COPY_FILES += \
