@@ -2,6 +2,14 @@
 # system.prop for apollo
 #
 
+# Some more stuff:
+    media.stagefright.enable-player=true 
+    media.stagefright.enable-meta=true 
+    media.stagefright.enable-scan=true 
+    media.stagefright.enable-http=true 
+    persist.sys.scrollingcache=2
+    net.bt.name=Android-GingerDX
+
 rild.libpath=/system/lib/libsec-ril.so
 rild.libargs=-d /dev/ttyS0
 ro.sf.lcd_density=120
@@ -75,4 +83,10 @@ ro.media.dec.jpeg.memcap=20000000
 ro.media.enc.jpeg.quality=100,90,80
 ro.media.lprof.vid.fps=24
 persist.cust.tel.eons=1
-
+persist.sys.themeId=ICSandwich 
+persist.sys.themePackageName=com.achep.theme.ICSandwich
+ro.ril.enable.a52=1 
+ro.ril.enable.a53=1
+ro.ril.enable.managed.roaming=1
+ro.ril.oem.nosim.ecclist=911,112,999,000,08,118,120,122,110,119,995
+ro.ril.emc.mode=2

@@ -59,13 +59,19 @@ PRODUCT_COPY_FILES += \
 
 # HAL libs and other system binaries
 PRODUCT_PACKAGES += \
+    copybit.GT-I5800 \
+    gralloc.GT-I5800 \
+    gps.GT-I5800 \
+    libsensors \
+    lights.GT-I5800 \
+    libGLES_fimg \
     brcm_patchram_plus \
     screencap \
-    dexpreopt \
     libstagefrighthw \
     libsecjpeg \
     libcamera \
     libsecgps \
+
 
 # gps
 PRODUCT_COPY_FILES += \
@@ -81,24 +87,22 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     CMWallpapers \
     Pacman \
-    Stk \
-    Superuser
+    Stk 
 
-#Hardware OMX Codecs
-PRODUCT_PACKAGES += \
-    libSEC_OMX_Core.s5p6442 \
-    libOMX.SEC.AVC.Decoder.s5p6442 \
-    libOMX.SEC.M4V.Decoder.s5p6442 \
-    libOMX.SEC.AVC.Encoder.s5p6442 \
-    libOMX.SEC.M4V.Encoder.s5p6442
-
+# GingerDX files
 PRODUCT_COPY_FILES += \
-	device/samsung/apollo/sec_mm/sec_omx/sec_omx_core/secomxregistry:system/etc/secomxregistry
+    vendor/cyanogen/prebuilt/common/gingerdx/app/GalleryDX.apk:/system/app/GalleryDX.apk \
+    vendor/cyanogen/prebuilt/common/gingerdx/app/HoloLauncher.apk:/system/app/HoloLauncher.apk \
+    vendor/cyanogen/prebuilt/common/gingerdx/app/GPSCountryOptimizer.apk:/system/app/GPSCountryOptimizer.apk \
+    vendor/cyanogen/prebuilt/common/gingerdx/lib/libqpicjni88.so:/system/lib/libqpicjni88.so \
+    vendor/cyanogen/prebuilt/common/gingerdx/app/ESFileExplorer.apk:/system/app/ESFileExplorer.apk \
+    vendor/cyanogen/prebuilt/common/xbin/zipalign:system/xbin/zipalign 
 
-# Theme packages
-PRODUCT_PACKAGES += \
-    Androidian \
-    Cyanbread 
+
+## SuperSU
+PRODUCT_COPY_FILES += \
+	vendor/cyanogen/prebuilt/common/gingerdx/app/SuperSU.apk:system/app/SuperSU.apk \
+	vendor/cyanogen/prebuilt/common/xbin/su:system/xbin/su 
 
 # Bluetooth MAC Address
 PRODUCT_PACKAGES += \
@@ -110,8 +114,7 @@ PRODUCT_COPY_FILES += \
     device/samsung/apollo/dhcpcd.conf:system/etc/dhcpcd.conf \
     device/samsung/apollo/vold.fstab:system/etc/vold.fstab \
     device/samsung/apollo/dbus.conf:system/etc/dbus.conf \
-    device/samsung/apollo/recovery.fstab:recovery/root/etc/recovery.fstab \
-    device/samsung/apollo/Credits-CM.html:system/etc/Credits-CM.html
+    device/samsung/apollo/recovery.fstab:recovery/root/etc/recovery.fstab 
 
 
 # Live wallpaper packages
@@ -122,6 +125,10 @@ PRODUCT_PACKAGES += \
     VisualizationWallpapers \
     librs_jni
 
+# The OpenGL ES API level that is natively supported by this device.
+# This is a 16.16 fixed point number
+PRODUCT_PROPERTY_OVERRIDES := \
+    ro.opengles.version=131072
 
 # Keyboard maps
 PRODUCT_COPY_FILES += \

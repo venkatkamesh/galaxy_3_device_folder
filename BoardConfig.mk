@@ -24,9 +24,6 @@
 # inherit from the proprietary version
 -include vendor/samsung/apollo/BoardConfigVendor.mk
 
-# Releasetools
-TARGET_RELEASETOOL_OTA_FROM_TARGET_SCRIPT := ./device/samsung/apollo/releasetools/apollo_ota_from_target_files
-
 # Board
 TARGET_BOARD_PLATFORM := s5p6442
 TARGET_CPU_ABI := armeabi-v6l
@@ -38,6 +35,8 @@ TARGET_GLOBAL_CFLAGS += -mtune=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp -O3
 TARGET_GLOBAL_CPPFLAGS += -mtune=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp -O3
 
 TARGET_BOOTLOADER_BOARD_NAME := GT-I5800
+
+TARGET_OTA_ASSERT_DEVICE := apollo,GT-I5800,GT-I5801
 
 BOARD_VENDOR_USE_AKMD := akm8973
 
@@ -55,7 +54,9 @@ DEFAULT_FB_NUM := 0
 
 # 2d/3d
 TARGET_BOARD_PLATFORM_GPU := fimg
+TARGET_LIBAGL_USE_GRALLOC_COPYBITS := true
 BOARD_EGL_CFG := vendor/samsung/apollo/proprietary/JPM/egl.cfg
+#BOARD_USES_COPYBIT := true
 BOARD_NO_RGBX_8888 := true
 BOARD_USE_SCREENCAP := true
 #BOARD_AVOID_DRAW_TEXTURE_EXTENSION := true
@@ -65,7 +66,9 @@ BOARD_USE_SCREENCAP := true
 BOARD_GPS_LIBRARIES := libsecgps libsecril-client
 BOARD_USES_GPSSHIM := true
 
-
+# sensors
+#TARGET_USES_OLD_LIBSENSORS_HAL := true
+#TARGET_SENSORS_NO_OPEN_CHECK := true
 
 BOARD_MOBILEDATA_INTERFACE_NAME := "pdp0"
 
@@ -162,6 +165,6 @@ TARGET_RECOVERY_PRE_COMMAND := "echo 1 > /cache/.startrecovery; sync;"
 BOARD_RECOVERY_HANDLES_MOUNT := true
 TARGET_NO_KERNEL := true
 BOARD_LDPI_RECOVERY := true
-TARGET_OTA_ASSERT_DEVICE := apollo,GT-I5800
+
 
 

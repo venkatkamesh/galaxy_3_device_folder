@@ -1,2 +1,2 @@
 PRODUCT_MAKEFILES := \
-    $(LOCAL_DIR)/full_apollo.mk
+    $(LOCAL_DIR)/cyanogen_apollo.mk

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+        <!--  WM8994 Control [TESTING] -->
+        <PreferenceScreen android:key="wm8994_settings"
+        android:title="@string/wm8994_settings_title_head"
+        android:summary="@string/wm8994_settings_summary_head">
+                <intent android:action="android.intent.action.MAIN"
+                        android:targetPackage="com.cyanogenmod.G3Parts"
+                        android:targetClass="com.cyanogenmod.G3Parts.WM8994ControlActivity" />
+        </PreferenceScreen>
+
+        <PreferenceCategory
+        android:title="@string/category_touchkey_title">
+            <!-- Touch key backlight timeout -->
+            <ListPreference
+                android:key="led_triggers"
+                android:title="@string/led_triggers_title_head"
+                android:summary="@string/led_triggers_summary_head"
+                android:entries="@array/led_triggers_entries"
+                        android:entryValues="@array/led_triggers_entries_values"
+                        android:defaultValue="none" />
+
+        </PreferenceCategory>
+
+        <PreferenceCategory
+        android:title="@string/category_g3rom_title">
+
+        </PreferenceCategory>
+        <PreferenceScreen android:key="credits_settings"
+        android:title="@string/category_g3rom_title">
+                <intent android:action="android.intent.action.MAIN"
+                        android:targetPackage="com.cyanogenmod.G3Parts"
+                        android:targetClass="com.cyanogenmod.G3Parts.Credits" />
+        </PreferenceScreen>
+
+        <PreferenceCategory
+        android:key="category_radio"
+        android:title="@string/category_radio_title">
+        <!-- UMTS/HSDPA/HSUPA settings -->
+        <ListPreference
+            android:key="hspa"
+            android:title="@string/hspa_title_head"
+            android:summary="@string/hspa_summary_head"
+            android:entries="@array/hspa_entries"
+            android:entryValues="@array/hspa_entries_values"
+            android:defaultValue="23" />
+       </PreferenceCategory>
+
+</PreferenceScreen>
